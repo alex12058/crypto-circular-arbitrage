@@ -4,5 +4,10 @@
     "exclude": [
       "**/*.json"
     ]
+  },
+  "rules" : {
+    "no-any": false,
+    "semicolon": true,
+    "prefer-readonly": true
   }
 }
