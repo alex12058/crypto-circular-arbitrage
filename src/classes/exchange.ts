@@ -37,7 +37,7 @@ export class Exchange {
         this._tickers.clear();
         const tickers = await this._exchange.fetchTickers();
         Object.keys(tickers).forEach(key => {
-            this._tickers.set(key, new Ticker((tickers as any)[key]));
+            this._tickers.set(key, new Ticker(this, (tickers as any)[key]));
         });
         this.load_quote_currencies();
     }
@@ -75,6 +75,6 @@ export class Exchange {
     }
 
     private async create_chains() {
-        await this._chainBuilder.create_chains();
+        await this._chainBuilder.createChains();
     }
 }

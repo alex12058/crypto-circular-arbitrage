@@ -1,9 +1,9 @@
 import { Ticker } from "./classes/ticker";
 import { Exchange } from "./classes/exchange";
+import { Chain } from "./classes/chain";
 
-interface ChainNode {
+export interface ChainNode {
 	ticker: Ticker;
-	tickerName: string;
 	prevCurrency: string;
 	nextCurrency: string;
 }
@@ -21,21 +21,21 @@ export class ChainBuilder {
 		this.exchange = exchange;
 	}
 
-	async create_chains() {
-		const chains_from_quotes = await this.build_chains_from_quotes();
-		console.log(chains_from_quotes);
+	async createChains() {
+		const chains_from_quotes = await this.buildChainsFromQuotes();
+		chains_from_quotes.slice(0, 100).forEach(chain => new Chain(this.exchange, chain));
 	}
 
-	async build_chains_from_quotes(): Promise<ChainNode[][]> {
+	async buildChainsFromQuotes(): Promise<ChainNode[][]> {
 		const tickers = this.exchange.tickers;
 		return Promise.all(
 			this.exchange.quoteCurrencies.map(quote => {
-				return this.build_chain(quote, tickers);
+				return this.buildChain(quote, tickers);
 			})
-		).then(createdChains => this.concat_chains(createdChains));
+		).then(createdChains => this.concatChains(createdChains));
 	}
 
-	private async build_chain(
+	private async buildChain(
 		startCurrency: string,
 		tickers: Map<string, Ticker>,
 		chainBuildState: ChainBuildState = {
@@ -44,25 +44,25 @@ export class ChainBuilder {
 		}
 	): Promise<ChainNode[][]> {
 		return Promise.all(
-			this.get_possible_links(startCurrency, tickers, chainBuildState)
+			this.getPossibleLink(startCurrency, tickers, chainBuildState)
 				.map(ticker => {
-					return this.take_paths(
+					return this.takePaths(
 						ticker,
 						startCurrency,
 						tickers,
 						chainBuildState
 					);
 				})
-		).then(createdChains => this.concat_chains(createdChains));
+		).then(createdChains => this.concatChains(createdChains));
 	}
 
-	private get_possible_links(
+	private getPossibleLink(
 		startCurrency: string,
 		tickers: Map<string, Ticker>,
 		chainBuildState: ChainBuildState
 	): Ticker[] {
 		return Array.from(tickers.values()).filter(ticker => {
-			return this.ticker_is_possible_link(
+			return this.tickerIsPossibleLink(
 				ticker,
 				startCurrency,
 				chainBuildState
@@ -70,14 +70,14 @@ export class ChainBuilder {
 		});
 	}
 
-	private ticker_is_possible_link(
+	private tickerIsPossibleLink(
 		ticker: Ticker,
 		startCurrency: string,
 		chainBuildState: ChainBuildState): boolean
 	{
 		const { currentCurrency, visited } = chainBuildState;
 			return !this.ticker_visited(ticker, visited)
-				&& ticker.has_currency(currentCurrency)
+				&& ticker.hasCurrency(currentCurrency)
 				&& (
 					visited.length < 2
 					|| ticker.opposite(currentCurrency) === startCurrency
@@ -85,16 +85,16 @@ export class ChainBuilder {
 	}
 
 	private ticker_visited(ticker: Ticker, visited: ChainNode[]): boolean {
-		return visited.some(visited => visited.tickerName === ticker.name);
+		return visited.some(visited => visited.ticker.name === ticker.name);
 	}
 
-	private end_of_chain(startCurrency: string, nextCurrency: string, 
+	private endOfChain(startCurrency: string, nextCurrency: string, 
 		chainLength: number): boolean
 	{
 		return startCurrency === nextCurrency || chainLength === 3;
 	}
 
-	private async take_paths(
+	private async takePaths(
 		nextTicker: Ticker,
 		startCurrency: string,
 		tickers: Map<string, Ticker>,
@@ -105,19 +105,18 @@ export class ChainBuilder {
 		const nextCurrency = nextTicker.opposite(currentCurrency);
 		const nextNode: ChainNode = {
 			ticker: nextTicker,
-			tickerName: nextTicker.name,
 			prevCurrency: currentCurrency,
 			nextCurrency
 		};
 		const nextVisited = visited.slice();
 		nextVisited.push(nextNode);
 
-		if(this.end_of_chain(startCurrency, nextCurrency, nextVisited.length)) {
+		if(this.endOfChain(startCurrency, nextCurrency, nextVisited.length)) {
 			return [ nextVisited ];
 		}
 		else {
 			// Else, continue the chain
-			return this.build_chain(
+			return this.buildChain(
 				startCurrency,
 				tickers,
 				{
@@ -132,7 +131,7 @@ export class ChainBuilder {
 	 * Merge chains that were created from taking separate paths into a singular
 	 * array of chains
 	 */
-	private concat_chains(chains: ChainNode[][][]): ChainNode[][] {
+	private concatChains(chains: ChainNode[][][]): ChainNode[][] {
 		return chains.reduce((curr, next) => {
 			return curr.concat(next);
 		}, []);
