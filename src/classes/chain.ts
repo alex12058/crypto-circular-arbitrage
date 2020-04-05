@@ -5,7 +5,7 @@ import { Exchange } from "./exchange";
 
 export class Chain {
 
-    private exchange: Exchange;
+    private readonly exchange: Exchange;
 
     constructor(exchange: Exchange, chainNodes: ChainNode[]) {
         this.exchange = exchange;
