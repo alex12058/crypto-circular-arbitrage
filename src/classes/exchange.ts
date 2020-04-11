@@ -2,7 +2,7 @@
 import ccxt = require('ccxt');
 import { Ticker } from './ticker';
 import { ChainBuilder } from '../chain_builder';
-import { contains } from '../helper';
+import { contains, unique } from '../helper';
 import { Chain } from './chain';
 
 export class Exchange {
@@ -46,34 +46,21 @@ export class Exchange {
 
     /**
      * Get a list of quote currencies from the tickers.
-     *  The base currency must not also be a quote currency
      */
     private load_quote_currencies() {
-        const firstPass: string[] = [];
-        const secondPass: string[] = [];
         const tickers = Array.from(this._tickers.values());
 
-        const firstPassRequirement = (ticker: Ticker) => {
-            // Quote not in first pass
-            return !contains(firstPass, ticker.quoteCurrency);
-        };
-        const secondPassRequirement = (ticker: Ticker) => {
-            // Quote not in second pass and base not in first pass
-            return !contains(secondPass, ticker.quoteCurrency)
-            && !contains(firstPass, ticker.baseCurrency);
-        };
+        // All the currencies listed as quote currencies
+        const firstPass = unique(tickers.map(ticker => ticker.quoteCurrency));
 
-        tickers.forEach(ticker => {
-            if(firstPassRequirement(ticker)) {
-                firstPass.push(ticker.quoteCurrency);
-            }
-        });
-        tickers.forEach(ticker => {
-            if(secondPassRequirement(ticker)) {
-                secondPass.push(ticker.quoteCurrency);
-            }
-        });
-        this._quoteCurrencies = secondPass;
+        // Exclude quote currencies that are only quote currencies to other quote
+        // currencies
+        this._quoteCurrencies = Array.from(
+            unique(tickers
+                .filter(ticker => !firstPass.has(ticker.baseCurrency))
+                .map(ticker => ticker.quoteCurrency)
+            )
+        );
     }
 
     private async create_chains() {

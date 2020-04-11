@@ -1,6 +1,7 @@
 
 import ccxt = require('ccxt');
 import { Exchange } from './exchange';
+import { contains } from '../helper';
 
 export class Ticker {
     private readonly exchange: Exchange;
@@ -30,7 +31,6 @@ export class Ticker {
     }
 
     baseIsQuote() {
-        return this.exchange.quoteCurrencies
-            .findIndex(quote => quote === this.baseCurrency) !== -1;
+        return contains(this.exchange.quoteCurrencies, this.baseCurrency);
     }
 }

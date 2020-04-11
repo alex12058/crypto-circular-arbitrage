@@ -3,6 +3,14 @@ export function contains<T>(objectArray: T[], search: T): boolean {
     return objectArray.some(object => object === search);
 }
 
+export function unique<T>(array: T[]) {
+    const unique = new Set<T>();
+    array.forEach(el => {
+        if(!unique.has(el)) unique.add(el);
+    });
+    return unique;
+}
+
 export function reverseIndex(index: number, arrayLength: number) {
     return Math.abs(index - (arrayLength - 1)) % arrayLength;
 }
