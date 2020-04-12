@@ -22,6 +22,8 @@
         "no-underscore-dangle": "off",
         "import/no-unresolved": "off",
         "import/extensions": "off",
-        "no-unused-vars": "off"
+        "no-unused-vars": "off",
+        "arrow-body-style": "off",
+        "no-console": "off"
     }
 }

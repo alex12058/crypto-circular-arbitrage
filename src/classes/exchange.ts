@@ -1,12 +1,18 @@
 
-import { assert } from 'console';
 import Market from './market';
 import ChainBuilder from '../chain_builder';
-import { unique, doAndLog } from '../helper';
+import { unique, doAndLog, assert } from '../helper';
 import Chain from './chain';
 import Currency from './currency';
 
 import ccxt = require('ccxt');
+
+interface API_KEY{
+  apiKey: string;
+  secret: string;
+}
+
+const API_KEYS = require('../api_keys.json');
 
 export default class Exchange {
     private readonly _exchange: ccxt.Exchange;
@@ -27,24 +33,42 @@ export default class Exchange {
       this._chainBuilder = new ChainBuilder(this);
     }
 
+    private async loadAPIKeys() {
+      const { name } = this._exchange;
+      await doAndLog(`Retrieving API keys for ${name}`, () => {
+        const APIKey: API_KEY | undefined = (API_KEYS as any)[name.toLowerCase()];
+        if (APIKey) {
+          assert(APIKey.apiKey !== undefined, `Invalid API Key for ${name}`);
+          assert(APIKey.secret !== undefined, `Invalid API Key for ${name}`);
+          const exchange = this._exchange;
+          exchange.apiKey = APIKey.apiKey;
+          exchange.secret = APIKey.secret;
+          return 'success';
+        }
+        return 'failure';
+      });
+      return this;
+    }
+
     private checkExchangeHasMethods() {
       const exchange = this._exchange;
+      const { name } = exchange;
 
       // Account info
-      assert(exchange.has.fetchBalance);
+      assert(exchange.has.fetchBalance, `${name} does not have fetchBalance()`);
 
       // Markets / Price data
-      assert(exchange.has.fetchMarkets);
-      assert(exchange.has.fetchL2OrderBook);
+      assert(exchange.has.fetchMarkets, `${name} does not have fetchMarkets()`);
+      assert(exchange.has.fetchL2OrderBook, `${name} does not have fetchL2OrderBook`);
 
       // Trade management
-      assert(exchange.has.fetchTradingFees);
-      assert(exchange.has.fetchTrades);
+      assert(exchange.has.fetchTradingFees, `${name} does not have fetchBalance()`);
+      assert(exchange.has.fetchTrades, `${name} does not have fetchTrades()`);
 
       // Order management
-      assert(exchange.has.createOrder);
-      assert(exchange.has.cancelOrder);
-      assert(exchange.has.fetchOpenOrders);
+      assert(exchange.has.createOrder, `${name} does not have createOrder()`);
+      assert(exchange.has.cancelOrder, `${name} does not have cancelOrder()`);
+      assert(exchange.has.fetchOpenOrders, `${name} does not have fetchOpenOrders()`);
     }
 
     get markets() {
@@ -60,6 +84,7 @@ export default class Exchange {
     }
 
     async initialize() {
+      await this.loadAPIKeys();
       await this.loadMarketsAndCurrencies();
       await this.createChains();
       return this;
@@ -76,12 +101,14 @@ export default class Exchange {
         Object.values(this._exchange.markets).forEach((market: ccxt.Market) => {
           this._markets.set(market.symbol, new Market(this, market));
         });
+        return `${this._markets.size} loaded`;
       });
 
       await doAndLog('Storing currencies', () => {
         Object.values(this._exchange.currencies).forEach((currency: ccxt.Currency) => {
           this._currencies.set(currency.code, new Currency(this, currency));
         });
+        return `${this._currencies.size} loaded`;
       });
 
       this.determineMainQuoteCurrencies();
@@ -104,12 +131,15 @@ export default class Exchange {
             .filter((market) => !firstPass.has(market.baseCurrency))
             .map((market) => market.quoteCurrency)),
         );
+
+        return `${this.quoteCurrencies.length} detected`;
       });
     }
 
     private async createChains() {
-      doAndLog('Building Chains', async () => {
+      doAndLog('Building chains', async () => {
         this._chains = await this._chainBuilder.createChains();
+        return `${this._chains.size} generated`;
       });
     }
 }
