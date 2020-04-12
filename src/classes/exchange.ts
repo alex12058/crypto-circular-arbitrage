@@ -1,7 +1,7 @@
 
 import Market from './market';
 import ChainBuilder from '../chain_builder';
-import { unique, doAndLog, assert, sleep } from '../helper';
+import { unique, doAndLog, assert } from '../helper';
 import Chain from './chain';
 import Currency from './currency';
 
