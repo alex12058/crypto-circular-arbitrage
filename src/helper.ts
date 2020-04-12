@@ -56,3 +56,7 @@ export async function doAndLog(message: string, callback: () => any) {
 export function assert(value: any, message:string) {
   if (!value) throw new Error(message);
 }
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

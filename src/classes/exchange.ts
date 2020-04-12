@@ -1,7 +1,7 @@
 
 import Market from './market';
 import ChainBuilder from '../chain_builder';
-import { unique, doAndLog, assert } from '../helper';
+import { unique, doAndLog, assert, sleep } from '../helper';
 import Chain from './chain';
 import Currency from './currency';
 
@@ -27,27 +27,12 @@ export default class Exchange {
 
     private _quoteCurrencies: string[] = [];
 
+    private apiKeyAdded = false;
+
     constructor(name: string) {
       this._exchange = new (ccxt as any)[name]();
       this.checkExchangeHasMethods();
       this._chainBuilder = new ChainBuilder(this);
-    }
-
-    private async loadAPIKeys() {
-      const { name } = this._exchange;
-      await doAndLog(`Retrieving API keys for ${name}`, () => {
-        const APIKey: API_KEY | undefined = (API_KEYS as any)[name.toLowerCase()];
-        if (APIKey) {
-          assert(APIKey.apiKey !== undefined, `Invalid API Key for ${name}`);
-          assert(APIKey.secret !== undefined, `Invalid API Key for ${name}`);
-          const exchange = this._exchange;
-          exchange.apiKey = APIKey.apiKey;
-          exchange.secret = APIKey.secret;
-          return 'success';
-        }
-        return 'failure';
-      });
-      return this;
     }
 
     private checkExchangeHasMethods() {
@@ -87,6 +72,26 @@ export default class Exchange {
       await this.loadAPIKeys();
       await this.loadMarketsAndCurrencies();
       await this.createChains();
+      await this.terminateIfNoAPIKey();
+      await this.loadBalances();
+      return this;
+    }
+
+    private async loadAPIKeys() {
+      const { name } = this._exchange;
+      await doAndLog(`Retrieving API keys for ${name}`, () => {
+        const APIKey: API_KEY | undefined = (API_KEYS as any)[name.toLowerCase()];
+        if (APIKey) {
+          assert(APIKey.apiKey !== undefined, `Invalid API Key for ${name}`);
+          assert(APIKey.secret !== undefined, `Invalid API Key for ${name}`);
+          const exchange = this._exchange;
+          exchange.apiKey = APIKey.apiKey;
+          exchange.secret = APIKey.secret;
+          this.apiKeyAdded = true;
+          return 'success';
+        }
+        return 'failure';
+      });
       return this;
     }
 
@@ -114,6 +119,27 @@ export default class Exchange {
       this.determineMainQuoteCurrencies();
     }
 
+    private async createChains() {
+      await doAndLog('Building chains', async () => {
+        this._chains = await this._chainBuilder.createChains();
+        return `${this._chains.size} generated`;
+      });
+    }
+
+    private async terminateIfNoAPIKey() {
+      if (!this.apiKeyAdded) {
+        console.log('No API key: process terminated.');
+        process.exit(0);
+      }
+    }
+
+    private async loadBalances() {
+      await doAndLog('Loading balances', async () => {
+        const balances = await this._exchange.fetchBalance();
+        this._currencies.forEach((currency, key) => currency.updateBalance(balances[key]));
+      });
+    }
+
     /**
      * Get a list of quote currencies from the market.
      */
@@ -133,13 +159,6 @@ export default class Exchange {
         );
 
         return `${this.quoteCurrencies.length} detected`;
-      });
-    }
-
-    private async createChains() {
-      doAndLog('Building chains', async () => {
-        this._chains = await this._chainBuilder.createChains();
-        return `${this._chains.size} generated`;
       });
     }
 }
