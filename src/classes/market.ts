@@ -6,20 +6,23 @@ import ccxt = require('ccxt');
 export default class Market {
     private readonly exchange: Exchange;
 
-    readonly baseCurrency: string;
-
-    readonly quoteCurrency: string;
-
     readonly market: ccxt.Market;
-
-    readonly symbol: string;
 
     constructor(exchange: Exchange, market: ccxt.Market) {
       this.exchange = exchange;
-      this.baseCurrency = market.base;
-      this.quoteCurrency = market.quote;
       this.market = market;
-      this.symbol = market.symbol;
+    }
+
+    get baseCurrency() {
+      return this.market.base;
+    }
+
+    get quoteCurrency() {
+      return this.market.quote;
+    }
+
+    get symbol() {
+      return this.market.symbol;
     }
 
     opposite(currency: string) {

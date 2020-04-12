@@ -12,6 +12,10 @@ export default class Currency {
       this.currency = currency;
     }
 
+    get code() {
+      return this.currency.code;
+    }
+
     isActive() {
       return (this.currency as any).active;
     }
