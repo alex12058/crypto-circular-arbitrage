@@ -2,7 +2,7 @@
 import { assert } from 'console';
 import Market from './market';
 import ChainBuilder from '../chain_builder';
-import { unique } from '../helper';
+import { unique, doAndLog } from '../helper';
 import Chain from './chain';
 import Currency from './currency';
 
@@ -28,18 +28,23 @@ export default class Exchange {
     }
 
     private checkExchangeHasMethods() {
+      const exchange = this._exchange;
+
+      // Account info
+      assert(exchange.has.fetchBalance);
+
       // Markets / Price data
-      assert(this._exchange.has.fetchMarkets);
-      assert(this._exchange.has.fetchL2OrderBook);
+      assert(exchange.has.fetchMarkets);
+      assert(exchange.has.fetchL2OrderBook);
 
       // Trade management
-      assert(this._exchange.has.fetchTradingFees);
-      assert(this._exchange.has.fetchTrades);
+      assert(exchange.has.fetchTradingFees);
+      assert(exchange.has.fetchTrades);
 
       // Order management
-      assert(this._exchange.has.createOrder);
-      assert(this._exchange.has.cancelOrder);
-      assert(this._exchange.has.fetchOpenOrders);
+      assert(exchange.has.createOrder);
+      assert(exchange.has.cancelOrder);
+      assert(exchange.has.fetchOpenOrders);
     }
 
     get markets() {
@@ -62,35 +67,49 @@ export default class Exchange {
 
     private async loadMarketsAndCurrencies() {
       this._markets.clear();
-      await this._exchange.loadMarkets(true);
-      Object.values(this._exchange.markets).forEach((market: ccxt.Market) => {
-        this._markets.set(market.symbol, new Market(this, market));
+
+      await doAndLog('Refreshing market data', async () => {
+        await this._exchange.loadMarkets(true);
       });
-      Object.values(this._exchange.currencies).forEach((currency: ccxt.Currency) => {
-        this._currencies.set(currency.code, new Currency(this, currency));
+
+      await doAndLog('Storing market pairs', () => {
+        Object.values(this._exchange.markets).forEach((market: ccxt.Market) => {
+          this._markets.set(market.symbol, new Market(this, market));
+        });
       });
+
+      await doAndLog('Storing currencies', () => {
+        Object.values(this._exchange.currencies).forEach((currency: ccxt.Currency) => {
+          this._currencies.set(currency.code, new Currency(this, currency));
+        });
+      });
+
       this.determineMainQuoteCurrencies();
     }
 
     /**
      * Get a list of quote currencies from the market.
      */
-    private determineMainQuoteCurrencies() {
-      const markets = Array.from(this._markets.values());
+    private async determineMainQuoteCurrencies() {
+      await doAndLog('Determining quote currencies', () => {
+        const markets = Array.from(this._markets.values());
 
-      // All the currencies listed as quote currencies
-      const firstPass = unique(markets.map((market) => market.quoteCurrency));
+        // All the currencies listed as quote currencies
+        const firstPass = unique(markets.map((market) => market.quoteCurrency));
 
-      // Exclude quote currencies that are only quote currencies to other quote
-      // currencies
-      this._quoteCurrencies = Array.from(
-        unique(markets
-          .filter((market) => !firstPass.has(market.baseCurrency))
-          .map((market) => market.quoteCurrency)),
-      );
+        // Exclude quote currencies that are only quote currencies to other quote
+        // currencies
+        this._quoteCurrencies = Array.from(
+          unique(markets
+            .filter((market) => !firstPass.has(market.baseCurrency))
+            .map((market) => market.quoteCurrency)),
+        );
+      });
     }
 
     private async createChains() {
-      this._chains = await this._chainBuilder.createChains();
+      doAndLog('Building Chains', async () => {
+        this._chains = await this._chainBuilder.createChains();
+      });
     }
 }

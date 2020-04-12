@@ -30,3 +30,11 @@ export function changeFirstIndex<T>(array: T[], newFirstIndex: number) {
 export function XOR(a: boolean, b: boolean) {
   return a !== b;
 }
+
+export async function doAndLog(message: string, callback: () => any) {
+  process.stdout.write(`${message}...`);
+  const start = new Date().getTime();
+  await callback();
+  const time = new Date().getTime() - start;
+  process.stdout.write(` [${time}ms]\n`);
+}
