@@ -97,14 +97,14 @@ export default class Exchange {
         await this._exchange.loadMarkets(true);
       });
 
-      await doAndLog('Storing market pairs', () => {
+      await doAndLog('Indexing markets', () => {
         Object.values(this._exchange.markets).forEach((market: ccxt.Market) => {
           this._markets.set(market.symbol, new Market(this, market));
         });
         return `${this._markets.size} loaded`;
       });
 
-      await doAndLog('Storing currencies', () => {
+      await doAndLog('Indexing currencies', () => {
         Object.values(this._exchange.currencies).forEach((currency: ccxt.Currency) => {
           this._currencies.set(currency.code, new Currency(this, currency));
         });
