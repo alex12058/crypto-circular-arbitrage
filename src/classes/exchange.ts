@@ -2,7 +2,7 @@
 import ccxt = require('ccxt');
 import { Market } from './market';
 import { ChainBuilder } from '../chain_builder';
-import { contains, unique } from '../helper';
+import { unique } from '../helper';
 import { Chain } from './chain';
 import { assert } from 'console';
 
@@ -53,7 +53,7 @@ export class Exchange {
 
     private async load_markets() {
         this._markets.clear();
-        const markets = await this._exchange.loadMarkets();
+        const markets = await this._exchange.loadMarkets(true);
         Object.keys(markets).forEach(key => {
             this._markets.set(key, new Market(this, (markets as any)[key]));
         });
