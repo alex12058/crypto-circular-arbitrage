@@ -46,11 +46,11 @@ export async function doAndLog(message: string, callback: () => any) {
 
   // Print out any result messange and the time it took to run the function
   let resultText = result ? ` [${result}]` : '';
-  while (message.length + resultText.length < 48) {
+  while (message.length + resultText.length < 45) {
     resultText = `.${resultText}`;
   }
   const timeText = time ? `${time}ms` : '<1ms';
-  process.stdout.write(`${resultText} [${timeText}]\n`);
+  process.stdout.write(`${resultText} | ${timeText}\n`);
 }
 
 export function assert(value: any, message:string) {
