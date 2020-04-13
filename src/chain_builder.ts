@@ -35,26 +35,26 @@ export default class ChainBuilder {
   }
 
   async buildChainsFromQuotes(): Promise<ChainNode[][]> {
-    const { activeMarkets } = this.exchange;
+    const { markets } = this.exchange;
     return Promise.all(
-      this.exchange.quoteCurrencies.map((quote) => this.buildChain(quote, activeMarkets)),
+      this.exchange.quoteCurrencies.map((quote) => this.buildChain(quote, markets)),
     ).then((createdChains) => ChainBuilder.concatChains(createdChains));
   }
 
   private async buildChain(
     startCurrency: string,
-    activeMarkets: Map<string, Market>,
+    markets: Map<string, Market>,
     chainBuildState: ChainBuildState = {
       currentCurrency: startCurrency,
       visited: [],
     },
   ): Promise<ChainNode[][]> {
     return Promise.all(
-      this.getPossibleLink(startCurrency, activeMarkets, chainBuildState)
+      this.getPossibleLink(startCurrency, markets, chainBuildState)
         .map((market) => this.takePaths(
           market,
           startCurrency,
-          activeMarkets,
+          markets,
           chainBuildState,
         )),
     ).then((createdChains) => ChainBuilder.concatChains(createdChains));
@@ -62,10 +62,10 @@ export default class ChainBuilder {
 
   private getPossibleLink(
     startCurrency: string,
-    activeMarkets: Map<string, Market>,
+    markets: Map<string, Market>,
     chainBuildState: ChainBuildState,
   ): Market[] {
-    return Array.from(activeMarkets.values()).filter((market) => this.marketIsPossibleLink(
+    return Array.from(markets.values()).filter((market) => this.marketIsPossibleLink(
       market,
       startCurrency,
       chainBuildState,
@@ -98,7 +98,7 @@ export default class ChainBuilder {
   private async takePaths(
     nextMarket: Market,
     startCurrency: string,
-    activeMarkets: Map<string, Market>,
+    markets: Map<string, Market>,
     chainBuildState: ChainBuildState,
   ): Promise<ChainNode[][]> {
     const { currentCurrency, visited } = chainBuildState;
@@ -119,7 +119,7 @@ export default class ChainBuilder {
     // Else, continue the chain
     return this.buildChain(
       startCurrency,
-      activeMarkets,
+      markets,
       {
         currentCurrency: nextCurrency,
         visited: nextVisited,

@@ -36,10 +36,6 @@ export default class Market {
       return this.market.symbol;
     }
 
-    isActive() {
-      return this.market.active;
-    }
-
     opposite(currency: string) {
       return currency === this.baseCurrency
         ? this.quoteCurrency

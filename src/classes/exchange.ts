@@ -69,18 +69,6 @@ export default class Exchange {
       return new Map(this._markets);
     }
 
-    get activeMarkets() {
-      const activeMarkets = new Map<string, Market>();
-      Array.from(this._markets.values()).forEach(market => {
-        if (market.isActive) activeMarkets.set(market.symbol, market);
-      });
-      return activeMarkets;
-    }
-
-    get getMarketsArray() {
-      return Array.from(this._markets.values()).slice();
-    }
-
     get quoteCurrencies() {
       return this._quoteCurrencies.slice();
     }
@@ -123,7 +111,7 @@ export default class Exchange {
 
       await doAndLog('Indexing markets', () => {
         Object.values(this.exchange.markets).forEach((market: ccxt.Market) => {
-          this._markets.set(market.symbol, new Market(this, market));
+          if (market.active) this._markets.set(market.symbol, new Market(this, market));
         });
         return `${this._markets.size} loaded`;
       });
@@ -153,8 +141,8 @@ export default class Exchange {
     }
 
     private async loadOrderBooks() {
-      const activeMarkets = Array.from(this._markets.values()).filter(m => m.isActive());
-      const promises = activeMarkets.map(market => market.initialize());
+      const markets = Array.from(this._markets.values())
+      const promises = markets.map(market => market.initialize());
 
       // Keep track of finished promises
       const finished = promises.map(_promise => false);
@@ -169,8 +157,8 @@ export default class Exchange {
         await doAndLog('Loading order book', async() => {
           const notCompleted = promises.filter((_value, index) => !finished[index]);
           const result = await Promise.race(notCompleted);
-          const completedLength = activeMarkets.length - (notCompleted.length - 1);
-          return `${result.symbol} (${completedLength}/${activeMarkets.length})`;
+          const completedLength = markets.length - (notCompleted.length - 1);
+          return `${result.symbol} (${completedLength}/${markets.length})`;
         });
       }
     }
