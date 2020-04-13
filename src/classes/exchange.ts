@@ -79,10 +79,10 @@ export default class Exchange {
 
     async initialize() {
       await this.loadAPIKeys();
+      await this.terminateIfNoAPIKey();
       await this.loadMarketsAndCurrencies();
       await this.createChains();
       await this.loadOrderBooks();
-      await this.terminateIfNoAPIKey();
       await this.loadBalances();
       return this;
     }
