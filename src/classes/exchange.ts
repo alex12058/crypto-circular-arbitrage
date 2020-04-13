@@ -168,7 +168,7 @@ export default class Exchange {
 
     private async loadBalances() {
       await doAndLog('Loading balances', async () => {
-        const balances = await request(this.exchange.fetchBalance);
+        const balances = await request(async() => this.exchange.fetchBalance());
         this._currencies.forEach((currency, key) => currency.updateBalance(balances[key]));
       });
     }
