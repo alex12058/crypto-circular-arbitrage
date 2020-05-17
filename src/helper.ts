@@ -76,3 +76,8 @@ export async function request<T>(callback: () => Promise<T>): Promise<T> {
   }
   throw lastError;
 }
+
+export function round(num: number, decimalPlaces: number) {
+  const multiplier = 10 ** decimalPlaces;
+  return Math.round(num * multiplier) / multiplier;
+}

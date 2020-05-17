@@ -9,7 +9,7 @@ export default class Currency {
 
     private readonly currency: ccxt.Currency;
 
-    private readonly _markets: Map<string, Market> = new Map();
+    readonly markets: Map<string, Market> = new Map();
 
     private free: number = 0;
 
@@ -21,7 +21,7 @@ export default class Currency {
     }
 
     addMarket(market: Market) {
-      this._markets.set(market.symbol, market);
+      this.markets.set(market.symbol, market);
     }
 
     get code() {
@@ -37,12 +37,12 @@ export default class Currency {
       if (this.code === this.exchange.mainQuoteCurrency) return 1;
 
       // Market where quote currency is the mainQuoteCurrency
-      const directMarket = this._markets.get(`${this.code}/${this.exchange.mainQuoteCurrency}`);
+      const directMarket = this.markets.get(`${this.code}/${this.exchange.mainQuoteCurrency}`);
       if (directMarket) return directMarket.midMarketPrice;
 
       // Market where base currency is the MainQuoteCurrency
       const indirectMarket = this.exchange.markets.get(`${this.exchange.mainQuoteCurrency}/${this.code}`);
-      assert(indirectMarket, `Currency cannot be evaluated in ${this.exchange.mainQuoteCurrency}`);
+      assert(indirectMarket, `${this.code} cannot be evaluated in ${this.exchange.mainQuoteCurrency}`);
       const indirectMidMarket = indirectMarket!.midMarketPrice;
       if (!indirectMidMarket) return undefined;
       return 1 / indirectMidMarket;

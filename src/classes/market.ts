@@ -60,6 +60,12 @@ export default class Market {
     return (bestAsk + bestBid) / 2;
   }
 
+  get mainQuoteMidMarketPrice() {
+    const midMarketPrice = this.midMarketPrice;
+    if (!midMarketPrice) return undefined;
+    return this.calculateMainQuotePrice(midMarketPrice);
+  }
+
   opposite(currency: string) {
     return currency === this.baseCurrency
       ? this.quoteCurrency
@@ -79,6 +85,12 @@ export default class Market {
     return OrderSimulator.execute({
       symbol: this,
       type, side, amount, price
-    })
+    });
+  }
+
+  calculateMainQuotePrice(quoteCurrencyPrice: number) {
+    const mainQuotePrice = this.exchange.allQuoteCurrencies.get(this.quoteCurrency)?.mainQuotePrice;
+    if (!mainQuotePrice) return undefined;
+    return quoteCurrencyPrice * mainQuotePrice;
   }
 }

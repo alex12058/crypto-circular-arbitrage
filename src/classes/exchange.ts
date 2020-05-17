@@ -1,7 +1,7 @@
 
 import Market from './market';
 import ChainBuilder from '../chain_builder';
-import { unique, doAndLog, assert, request } from '../helper';
+import { unique, doAndLog, assert, request, round } from '../helper';
 import Chain from './chain';
 import Currency from './currency';
 
@@ -36,7 +36,15 @@ export default class Exchange {
 
     private _chains: Map<string, Chain> = new Map();
 
-    quoteCurrencies = new Map<string, Currency>();
+    /**
+     * All quoteCurrencies
+     */
+    readonly allQuoteCurrencies = new Map<string, Currency>();
+
+    /**
+     * Only quoteCurrencies that have markets with a non-quoteCurrency baseCurrency
+     */
+    readonly quoteCurrencies = new Map<string, Currency>();
 
     public static readonly RETRY_DELAY_MS = 1000;
 
@@ -81,6 +89,13 @@ export default class Exchange {
         await this.loadMarketsAndCurrencies();
         await this.createChains();
         await this.loadOrderBooks();
+        //TODO: 
+        /**
+         * Create a way to evaluate quoteCurrencies that are not directly
+         * associated with the selected mainQuoteCurrency. A good way would be
+         * to create a frequency of the quoteCurrencies and try to get to the
+         * mainQuoteCurrency using the frequency order.
+         */
         await this.loadBalances();
       }
       catch (error) {
@@ -91,7 +106,25 @@ export default class Exchange {
       return this;
     }
 
-    // TODO: Make a sub function of loadConfiguration() which also has details about rate limiting
+    printPriceTable() {
+      const currencies = Array.from(this.currencies.values()).sort((a, b) => {
+        if (a.code > b.code) return 1;
+        return -1;
+      });
+      const table: any = {};
+      currencies.forEach(currency => {
+        const row: any = {};
+        currency.markets.forEach(market => {
+          let midMarketPrice = market.mainQuoteMidMarketPrice;
+          if (midMarketPrice) midMarketPrice = round(midMarketPrice, 8);
+          row[market.quoteCurrency] = midMarketPrice;
+        });
+        table[currency.code] = row;
+      });
+      console.log('\nMid market prices:')
+      console.table(table);
+    }
+
     private async loadExchangeConfiguration() {
       const { name } = this.exchange;
       let loaded = false;
@@ -188,24 +221,28 @@ export default class Exchange {
     private async determineMainQuoteCurrencies() {
       let aborted = false;
       await doAndLog('Determining quote currencies', () => {
-        this.quoteCurrencies.clear();
-
         const markets = Array.from(this.markets.values());
 
-        // All the currencies listed as quote currencies
-        const firstPass = unique(markets.map((market) => market.quoteCurrency));
-
-        // Exclude quote currencies that are only quote currencies to other quote
-        // currencies
+        // All quoteCurrencies
+        this.allQuoteCurrencies.clear();
         unique(
-          markets
-            .filter((market) => !firstPass.has(market.baseCurrency))
-            .map((market) => market.quoteCurrency)
-        ).forEach(currencyCode => {
-          const currency = this.currencies.get(currencyCode);
-          assert(currency, `Currency ${currencyCode} missing from currencies map`);
-          this.quoteCurrencies.set(currencyCode, currency!);
+          markets.map((market) => market.quoteCurrency)
+        ).forEach(quoteCurrency => {
+          const currency = this.currencies.get(quoteCurrency);
+          assert(currency, `Currency ${quoteCurrency} is missing from the currency map`);
+          this.allQuoteCurrencies.set(currency!.code, currency!);
         });
+  
+        // Only quoteCurrencies that have markets with a non-quoteCurrency baseCurrency
+        this.quoteCurrencies.clear();
+        unique(
+          markets.filter(market => !this.allQuoteCurrencies.has(market.baseCurrency))
+            .map(market => market.quoteCurrency)
+        ).forEach(quoteCurrency => {
+          const currency = this.currencies.get(quoteCurrency);
+          assert(currency, `Currency ${quoteCurrency} is missing from the currency map`);
+          this.quoteCurrencies.set(currency!.code, currency!);
+        })
 
         if(!this.quoteCurrencies.has(this.mainQuoteCurrency)) {
           aborted = true;
