@@ -25,22 +25,26 @@ const exchangeConfigs = require('../exchange_configs.json');
 export default class Exchange {
     readonly exchange: ccxt.Exchange;
 
-    private readonly _markets: Map<string, Market> = new Map();
+    /** What every currecny will be valued against */
+    readonly mainQuoteCurrency: string;
 
-    private readonly _currencies: Map<string, Currency> = new Map();
+    readonly markets: Map<string, Market> = new Map();
+
+    readonly currencies: Map<string, Currency> = new Map();
 
     private readonly _chainBuilder: ChainBuilder;
 
     private _chains: Map<string, Chain> = new Map();
 
-    private _quoteCurrencies: string[] = [];
+    quoteCurrencies = new Map<string, Currency>();
 
     public static readonly RETRY_DELAY_MS = 1000;
 
     public static readonly NUM_RETRY_ATTEMPTS = 3;
 
-    constructor(name: string) {
-      this.exchange = new (ccxt as any)[name]({ enableRateLimit: true });
+    constructor(config: { name: string, mainQuoteCurrency: string }) {
+      this.exchange = new (ccxt as any)[config.name]({ enableRateLimit: true });
+      this.mainQuoteCurrency = config.mainQuoteCurrency;
       this.checkExchangeHasMethods();
       this._chainBuilder = new ChainBuilder(this);
     }
@@ -71,20 +75,19 @@ export default class Exchange {
       assert(exchange.has.fetchOpenOrders, `${name} does not have fetchOpenOrders()`);
     }
 
-    get markets() {
-      return new Map(this._markets);
-    }
-
-    get quoteCurrencies() {
-      return this._quoteCurrencies.slice();
-    }
-
     async initialize() {
-      await this.loadExchangeConfiguration();
-      await this.loadMarketsAndCurrencies();
-      await this.createChains();
-      await this.loadOrderBooks();
-      await this.loadBalances();
+      try {
+        await this.loadExchangeConfiguration();
+        await this.loadMarketsAndCurrencies();
+        await this.createChains();
+        await this.loadOrderBooks();
+        await this.loadBalances();
+      }
+      catch (error) {
+        console.log(error);
+        process.exit(1);
+      }
+
       return this;
     }
 
@@ -113,27 +116,33 @@ export default class Exchange {
     }
 
     private async loadMarketsAndCurrencies() {
-      this._markets.clear();
+      this.markets.clear();
 
       await doAndLog('Refreshing market data', async () => {
         await request(async () => this.exchange.loadMarkets(true));
       });
 
+      await doAndLog('Indexing currencies', () => {
+        // Create currencies
+        Object.values(this.exchange.currencies).forEach((currency: ccxt.Currency) => {
+          this.currencies.set(currency.code, new Currency(this, currency));
+        });
+        return `${this.currencies.size} loaded`;
+      });
+
       await doAndLog('Indexing markets', () => {
         Object.values(this.exchange.markets).forEach((market: ccxt.Market) => {
-          if (market.active) this._markets.set(market.symbol, new Market(this, market));
+          if (market.active) {
+            const newMarket = new Market(this, market);
+            this.markets.set(market.symbol, newMarket);
+            this.currencies.get(newMarket.baseCurrency)?.addMarket(newMarket);
+          } 
         });
-        return `${this._markets.size} loaded`;
+        return `${this.markets.size} loaded`;
       });
 
-      await doAndLog('Indexing currencies', () => {
-        Object.values(this.exchange.currencies).forEach((currency: ccxt.Currency) => {
-          this._currencies.set(currency.code, new Currency(this, currency));
-        });
-        return `${this._currencies.size} loaded`;
-      });
 
-      this.determineMainQuoteCurrencies();
+      await this.determineMainQuoteCurrencies();
     }
 
     private async createChains() {
@@ -144,7 +153,7 @@ export default class Exchange {
     }
 
     private async loadOrderBooks() {
-      const markets = Array.from(this._markets.values())
+      const markets = Array.from(this.markets.values())
       const promises = markets.map(market => market.initialize());
 
       // Keep track of finished promises
@@ -169,7 +178,7 @@ export default class Exchange {
     private async loadBalances() {
       await doAndLog('Loading balances', async () => {
         const balances = await request(async() => this.exchange.fetchBalance());
-        this._currencies.forEach((currency, key) => currency.updateBalance(balances[key]));
+        this.currencies.forEach((currency, key) => currency.updateBalance(balances[key]));
       });
     }
 
@@ -177,21 +186,36 @@ export default class Exchange {
      * Get a list of quote currencies from the market.
      */
     private async determineMainQuoteCurrencies() {
+      let aborted = false;
       await doAndLog('Determining quote currencies', () => {
-        const markets = Array.from(this._markets.values());
+        this.quoteCurrencies.clear();
+
+        const markets = Array.from(this.markets.values());
 
         // All the currencies listed as quote currencies
         const firstPass = unique(markets.map((market) => market.quoteCurrency));
 
         // Exclude quote currencies that are only quote currencies to other quote
         // currencies
-        this._quoteCurrencies = Array.from(
-          unique(markets
+        unique(
+          markets
             .filter((market) => !firstPass.has(market.baseCurrency))
-            .map((market) => market.quoteCurrency)),
-        );
+            .map((market) => market.quoteCurrency)
+        ).forEach(currencyCode => {
+          const currency = this.currencies.get(currencyCode);
+          assert(currency, `Currency ${currencyCode} missing from currencies map`);
+          this.quoteCurrencies.set(currencyCode, currency!);
+        });
 
-        return `${this.quoteCurrencies.length} detected`;
+        if(!this.quoteCurrencies.has(this.mainQuoteCurrency)) {
+          aborted = true;
+          return 'aborted'
+        }
+
+        return `${this.quoteCurrencies.size} detected`;
       });
+      if (aborted) {
+        throw new Error(`${this.mainQuoteCurrency} is not a valid quoteCurrency.`)
+      }
     }
 }

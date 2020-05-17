@@ -37,7 +37,7 @@ export default class ChainBuilder {
   async buildChainsFromQuotes(): Promise<ChainNode[][]> {
     const { markets } = this.exchange;
     return Promise.all(
-      this.exchange.quoteCurrencies.map((quote) => this.buildChain(quote, markets)),
+      Array.from(this.exchange.quoteCurrencies.keys()).map(quote => this.buildChain(quote, markets)),
     ).then((createdChains) => ChainBuilder.concatChains(createdChains));
   }
 

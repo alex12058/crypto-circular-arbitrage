@@ -41,6 +41,25 @@ export default class Market {
     return {...this._orderBook} as ccxt.OrderBook;
   }
 
+  get bestAsk() {
+    const best = this._orderBook.asks[0];
+    if (!best) return undefined;
+    return best[0];
+  }
+
+  get bestBid() {
+    const best = this._orderBook.bids[0];
+    if (!best) return undefined;
+    return best[0];
+  }
+
+  get midMarketPrice() {
+    const bestAsk = this.bestAsk;
+    const bestBid = this.bestBid;
+    if (!bestAsk || !bestBid) return undefined;
+    return (bestAsk + bestBid) / 2;
+  }
+
   opposite(currency: string) {
     return currency === this.baseCurrency
       ? this.quoteCurrency
@@ -53,7 +72,7 @@ export default class Market {
   }
 
   baseIsQuote() {
-    return contains(this.exchange.quoteCurrencies, this.baseCurrency);
+    return this.exchange.quoteCurrencies.has(this.baseCurrency);
   }
 
   simulateOrder(type: OrderType, side: OrderSide, amount: number, price?:number) {
