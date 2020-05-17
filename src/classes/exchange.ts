@@ -107,10 +107,13 @@ export default class Exchange {
     }
 
     printPriceTable() {
-      const currencies = Array.from(this.currencies.values()).sort((a, b) => {
-        if (a.code > b.code) return 1;
-        return -1;
-      });
+      const currencies = Array.from(this.currencies.values())
+        .filter(currency => currency.markets.size)
+        .sort((a, b) => {
+          if (a.code > b.code) return 1;
+          return -1;
+        }
+      );
       const table: any = {};
       currencies.forEach(currency => {
         const row: any = {};
