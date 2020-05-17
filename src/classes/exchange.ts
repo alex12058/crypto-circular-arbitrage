@@ -6,13 +6,21 @@ import Chain from './chain';
 import Currency from './currency';
 
 import ccxt = require('ccxt');
+import { stringify } from 'querystring';
 
-interface API_KEY{
+interface ExchangeConfig{
+  rateLimit?: number;
   apiKey: string;
   secret: string;
 }
 
-const API_KEYS = require('../api_keys.json');
+function isExchangeConfig(exchangeConfig: ExchangeConfig) {
+  return typeof exchangeConfig.apiKey === 'string'
+    && typeof exchangeConfig.secret === 'string'
+    && !exchangeConfig.rateLimit || typeof exchangeConfig.rateLimit === 'number';
+}
+
+const exchangeConfigs = require('../exchange_configs.json');
 
 export default class Exchange {
     readonly exchange: ccxt.Exchange;
@@ -26,8 +34,6 @@ export default class Exchange {
     private _chains: Map<string, Chain> = new Map();
 
     private _quoteCurrencies: string[] = [];
-
-    private apiKeyAdded = false;
 
     public static readonly RETRY_DELAY_MS = 1000;
 
@@ -74,8 +80,7 @@ export default class Exchange {
     }
 
     async initialize() {
-      await this.loadAPIKeys();
-      await this.terminateIfNoAPIKey();
+      await this.loadExchangeConfiguration();
       await this.loadMarketsAndCurrencies();
       await this.createChains();
       await this.loadOrderBooks();
@@ -84,21 +89,26 @@ export default class Exchange {
     }
 
     // TODO: Make a sub function of loadConfiguration() which also has details about rate limiting
-    private async loadAPIKeys() {
+    private async loadExchangeConfiguration() {
       const { name } = this.exchange;
-      await doAndLog(`Retrieving API keys for ${name}`, () => {
-        const APIKey: API_KEY | undefined = (API_KEYS as any)[name.toLowerCase()];
-        if (APIKey) {
-          assert(APIKey.apiKey !== undefined, `Invalid API Key for ${name}`);
-          assert(APIKey.secret !== undefined, `Invalid API Key for ${name}`);
+      let loaded = false;
+      await doAndLog(`Loading config for ${name}`, () => {
+        const exchangeConfig: ExchangeConfig | undefined = (exchangeConfigs as any)[name.toLowerCase()];
+        if (exchangeConfig) {
+          if (!isExchangeConfig(exchangeConfig)) return 'invalid config';
           const exchange = this.exchange;
-          exchange.apiKey = APIKey.apiKey;
-          exchange.secret = APIKey.secret;
-          this.apiKeyAdded = true;
+          exchange.apiKey = exchangeConfig.apiKey;
+          exchange.secret = exchangeConfig.secret;
+          if (exchangeConfig.rateLimit) this.setMaxRequestsPerSecond(exchangeConfig.rateLimit);
+          loaded = true;
           return 'success';
         }
-        return 'failure';
+        return 'no config found'
       });
+      if (!loaded) {
+        console.log('Load sequence aborted.')
+        process.exit(0);
+      }
       return this;
     }
 
@@ -131,13 +141,6 @@ export default class Exchange {
         this._chains = await this._chainBuilder.createChains();
         return `${this._chains.size} generated`;
       });
-    }
-
-    private async terminateIfNoAPIKey() {
-      if (!this.apiKeyAdded) {
-        console.log('No API key: process terminated.');
-        process.exit(0);
-      }
     }
 
     private async loadOrderBooks() {

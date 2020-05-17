@@ -27,7 +27,7 @@ export default class ChainBuilder {
     const chainMap = new Map<string, Chain>();
     chainsFromQuotes.forEach((primativeChain) => {
       const chain = new Chain(this.exchange, primativeChain);
-      if (chainMap.get(chain.hash) === undefined) {
+      if (!chainMap.has(chain.hash)) {
         chainMap.set(chain.hash, chain);
       }
     });
