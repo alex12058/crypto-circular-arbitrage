@@ -60,10 +60,10 @@ export default class Market {
     return (bestAsk + bestBid) / 2;
   }
 
-  get mainQuoteMidMarketPrice() {
+  get midMarketPriceInValueCurrency() {
     const midMarketPrice = this.midMarketPrice;
     if (!midMarketPrice) return undefined;
-    return this.calculateMainQuotePrice(midMarketPrice);
+    return this.convertPrice(midMarketPrice);
   }
 
   opposite(currency: string) {
@@ -88,9 +88,9 @@ export default class Market {
     });
   }
 
-  calculateMainQuotePrice(quoteCurrencyPrice: number) {
-    const mainQuotePrice = this.exchange.allQuoteCurrencies.get(this.quoteCurrency)?.mainQuotePrice;
-    if (!mainQuotePrice) return undefined;
-    return quoteCurrencyPrice * mainQuotePrice;
+  private convertPrice(quoteCurrencyQuantity: number) {
+    const quoteCurrencyPrice = this.exchange.allQuoteCurrencies.get(this.quoteCurrency)?.price;
+    if (!quoteCurrencyPrice) return undefined;
+    return quoteCurrencyQuantity * quoteCurrencyPrice;
   }
 }

@@ -22,37 +22,44 @@ function isExchangeConfig(exchangeConfig: ExchangeConfig) {
 
 const exchangeConfigs = require('../exchange_configs.json');
 
+/**
+ * The configuration takes the name of the exchange and the names of two currencies.
+ * For the currencies to work the connectingCurrency should be the dominant currency (BTC)
+ * and the valueCurrency should have low volatility (such as USDT or USD). There
+ * must exist a market that has both the connectingCurrency and the valueCurrency
+ * so that price conversions can be done.
+ * 
+ * @param name The name of the exchange
+ * @param connectingCurrency The currency used to determine the pricing relationship between currencies. It should be the dominant currency (most traded) e.g. BTC
+ * @param valueCurrency The currency all prices are converted to (e.g. USDT)
+ */
+interface ExchangeConstructorParams {
+  name: string;
+  connectingCurrency: string,
+  valueCurrency: string,
+}
+
 export default class Exchange {
     readonly exchange: ccxt.Exchange;
 
-    /** What every currecny will be valued against */
-    readonly mainQuoteCurrency: string;
-
+    /** Currency used to determine price relations between currencies */
+    readonly connectingCurrency: string;
+    /** Currency all prices are converted to (from connectingCurrency) */
+    readonly valueCurrency: string;
     readonly markets: Map<string, Market> = new Map();
-
     readonly currencies: Map<string, Currency> = new Map();
-
     private readonly _chainBuilder: ChainBuilder;
-
     private _chains: Map<string, Chain> = new Map();
-
-    /**
-     * All quoteCurrencies
-     */
     readonly allQuoteCurrencies = new Map<string, Currency>();
-
-    /**
-     * Only quoteCurrencies that have markets with a non-quoteCurrency baseCurrency
-     */
+    /** Only quoteCurrencies that have markets with a non-quoteCurrency baseCurrency */
     readonly quoteCurrencies = new Map<string, Currency>();
-
     public static readonly RETRY_DELAY_MS = 1000;
-
     public static readonly NUM_RETRY_ATTEMPTS = 3;
 
-    constructor(config: { name: string, mainQuoteCurrency: string }) {
+    constructor(config: ExchangeConstructorParams) {
       this.exchange = new (ccxt as any)[config.name]({ enableRateLimit: true });
-      this.mainQuoteCurrency = config.mainQuoteCurrency;
+      this.connectingCurrency = config.connectingCurrency;
+      this.valueCurrency = config.valueCurrency;
       this.checkExchangeHasMethods();
       this._chainBuilder = new ChainBuilder(this);
     }
@@ -118,9 +125,8 @@ export default class Exchange {
       currencies.forEach(currency => {
         const row: any = {};
         currency.markets.forEach(market => {
-          let midMarketPrice = market.mainQuoteMidMarketPrice;
-          if (midMarketPrice) midMarketPrice = round(midMarketPrice, 8);
-          row[market.quoteCurrency] = midMarketPrice;
+          let midMarketPrice = market.midMarketPriceInValueCurrency;
+          row[market.quoteCurrency] = midMarketPrice && round(midMarketPrice, 8);
         });
         table[currency.code] = row;
       });
@@ -177,8 +183,26 @@ export default class Exchange {
         return `${this.markets.size} loaded`;
       });
 
-
       await this.determineMainQuoteCurrencies();
+
+      // Remove quote currencies we cannot valuate in the main quoteCurrency
+      await doAndLog('Removing bad quote currencies', () => {
+        const badQuotes = [...this.allQuoteCurrencies.values()]
+          .filter(quoteCurrency => !quoteCurrency.priceIsDeterminable());
+        const badQuotesCodes = badQuotes.map(badQuote => badQuote.code);
+        badQuotesCodes.forEach(badQuoteCode => {
+          this.allQuoteCurrencies.delete(badQuoteCode);
+          this.quoteCurrencies.delete(badQuoteCode);
+          this.currencies.delete(badQuoteCode);
+        });
+        this.markets.forEach(market => {
+          if (badQuotesCodes.some(code => market.hasCurrency(code))) {
+            this.markets.delete(market.symbol);
+            this.currencies.get(market.baseCurrency)?.removeMarket(market.symbol);
+          }
+        })
+        return `${badQuotes.length} deleted`;
+      });
     }
 
     private async createChains() {
@@ -222,7 +246,8 @@ export default class Exchange {
      * Get a list of quote currencies from the market.
      */
     private async determineMainQuoteCurrencies() {
-      let aborted = false;
+      let missingCurrency: string | undefined = undefined;
+      let connectingMarketMissing = false;
       await doAndLog('Determining quote currencies', () => {
         const markets = Array.from(this.markets.values());
 
@@ -247,15 +272,56 @@ export default class Exchange {
           this.quoteCurrencies.set(currency!.code, currency!);
         })
 
-        if(!this.quoteCurrencies.has(this.mainQuoteCurrency)) {
-          aborted = true;
-          return 'aborted'
+        if (!this.quoteCurrencies.has(this.connectingCurrency)) {
+          missingCurrency = this.connectingCurrency;
+          return 'aborted';
+        }
+        if (!this.currencies.has(this.valueCurrency)) {
+          missingCurrency = this.valueCurrency;
+          return 'aborted';
+        }
+        if (!(this.connectingDirectMarket || this.connectingIndirectMarket)) {
+          connectingMarketMissing = true;
+          return 'aborted';
         }
 
         return `${this.quoteCurrencies.size} detected`;
       });
-      if (aborted) {
-        throw new Error(`${this.mainQuoteCurrency} is not a valid quoteCurrency.`)
+      if (missingCurrency) {
+        throw new Error(`${missingCurrency} is not a valid quoteCurrency.`)
       }
+      if (connectingMarketMissing) {
+        throw new Error(`connecting currency ${this.connectingCurrency} has no direct connection to value currency ${this.valueCurrency} (no trading pair).`);
+      }
+    }
+
+    private get connectingDirectMarket() {
+      return this.markets.get(`${this.connectingCurrency}/${this.valueCurrency}`);
+    }
+
+    private get connectingIndirectMarket() {
+      return this.markets.get(`${this.valueCurrency}/${this.connectingCurrency}`);
+    }
+
+    /**
+     * Gets the number required to convert a price from the connectingCurrency
+     * to the valueCurrency.
+     * 
+     * E.g. If the price is in BTC and we want to evaluate in USDT then the
+     * muliplier will be the cost of BTC in USDT.
+     */
+    get connectingPriceMultiplier() {
+      // Market where base is connectingCurrency and quote is valueCurrency
+      const directMarket = this.connectingDirectMarket; // e.g. BTC/USDT
+      if (directMarket) return directMarket.midMarketPrice;
+
+      // Market where the base is valueCurrency and quote is connectingCurrency
+      const indirectMarket = this.connectingIndirectMarket; // e.g. USDT/BTC
+      if (indirectMarket) {
+        const indirectMidMarket = indirectMarket.midMarketPrice;
+        if (!indirectMidMarket) return undefined;
+        return 1 / indirectMidMarket;
+      }
+      return undefined;
     }
 }
