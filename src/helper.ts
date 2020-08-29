@@ -14,7 +14,8 @@ export function unique<T>(array: T[]) {
   return uniqueSet;
 }
 
-export function reverseIndex(index: number, arrayLength: number) {
+/** Get the new index of an array item after Array.reverse  */
+export function mirrorIndex(index: number, arrayLength: number) {
   return Math.abs(index - (arrayLength - 1)) % arrayLength;
 }
 
@@ -26,10 +27,12 @@ export function nextLoopableIndex(index: number, arrayLength: number) {
   return (index + 1) % arrayLength;
 }
 
+/** Cut off front of array and add to end so specified index is now index 0 */
 export function changeFirstIndex<T>(array: T[], newFirstIndex: number) {
-  return array.slice(newFirstIndex).concat(array.slice(0, newFirstIndex));
+  return array.concat(array.splice(0, newFirstIndex));
 }
 
+/** XOR Gate */
 export function XOR(a: boolean, b: boolean) {
   return a !== b;
 }

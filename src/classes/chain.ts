@@ -1,6 +1,6 @@
 import { ChainNode } from '../chain_builder';
 import {
-  nextLoopableIndex, prevLoopableIndex, reverseIndex, changeFirstIndex, XOR,
+  nextLoopableIndex, prevLoopableIndex, mirrorIndex, changeFirstIndex, XOR,
 } from '../helper';
 import Market from './market';
 import Exchange from './exchange';
@@ -18,20 +18,43 @@ export default class Chain {
       this.hash = Chain.generateHash(this.markets);
     }
 
+    /**
+     * Given a chain which represents a unique sequence of markets that forms a
+     * loop; return an array of markets in a determinable order that maintains
+     * the chains sequence. Allowed manipulations are changing the starting index
+     * and reversing the sequence.
+     * 
+     * The starting index (first market) is the one with the highest priority.
+     * The second market is the market directory connecting the the first
+     * market with the highest priority.
+     * 
+     * 
+     * Example: [XEMBTC -> XEMUSD -> BTCUSD]
+     * 
+     * Selecting the starting index (first market):
+     * In this sequence XEMBTC is the first market as its baseCurrency (XEM) is
+     * not a quoteCurrency. XEMBTC has a higher priority than XEMUSD because it
+     * comes first alphabetically.
+     * 
+     * Selecting the second market: Both XEMUSD and BTCUSD are directly connected
+     * to XEMBTC. XEMUSD has a higher priority because its base currency (XEM) is
+     * not a quoteCurrency.
+     */
     private static getHashableOrder(chainNodes: ChainNode[]) {
-      const markets = chainNodes.map((link) => link.market);
-      const sortedMarketSymbols = Chain.sortMarketSymbols(markets);
+      const markets = chainNodes.map(link => link.market);
+      const sortedMarketSymbols = markets
+        .sort(this.compareMarkets)
+        .map(market => market.symbol);
       const firstMarket = sortedMarketSymbols[0];
       let firstMarketIndex = markets.findIndex((market) => market.symbol === firstMarket);
       if (Chain.needToReverseOrder(markets, sortedMarketSymbols, firstMarketIndex)) {
         markets.reverse();
-        firstMarketIndex = reverseIndex(firstMarketIndex, markets.length);
+        firstMarketIndex = mirrorIndex(firstMarketIndex, markets.length);
       }
       return changeFirstIndex(markets, firstMarketIndex);
     }
 
-    private static sortMarketSymbols(markets: Market[]) {
-      return markets.slice().sort((a, b) => {
+    private static compareMarkets = (a: Market, b: Market) => {
         const aHasQuoteBase = a.baseIsQuote();
         const bhasQuoteBase = b.baseIsQuote();
 
@@ -42,13 +65,14 @@ export default class Chain {
           if (aHasQuoteBase) return 1;
         }
 
-        // Else compare using market symbol
-        return a.symbol < b.symbol
-          ? -1
-          : 1;
-      }).map((market) => market.symbol);
+        // Else compare alphabetically using market symbol
+        return a.symbol < b.symbol ? -1 : 1;
     }
 
+    /**
+     * Return true if the market before the firstMarket (one with highest priority)
+     * has a higher priority than the market ater the firstMarket
+     */
     private static needToReverseOrder(markets: Market[], sortedMarketSymbols: string[],
       firstMarketIndex: number) {
       const nextMarketIndex = nextLoopableIndex(firstMarketIndex, markets.length);
