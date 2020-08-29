@@ -96,13 +96,6 @@ export default class Exchange {
         await this.loadMarketsAndCurrencies();
         await this.createChains();
         await this.loadOrderBooks();
-        //TODO: 
-        /**
-         * Create a way to evaluate quoteCurrencies that are not directly
-         * associated with the selected mainQuoteCurrency. A good way would be
-         * to create a frequency of the quoteCurrencies and try to get to the
-         * mainQuoteCurrency using the frequency order.
-         */
         await this.loadBalances();
       }
       catch (error) {
