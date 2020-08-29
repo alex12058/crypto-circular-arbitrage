@@ -29,12 +29,16 @@ export function nextLoopableIndex(index: number, arrayLength: number) {
 
 /** Cut off front of array and add to end so specified index is now index 0 */
 export function changeFirstIndex<T>(array: T[], newFirstIndex: number) {
-  return array.concat(array.splice(0, newFirstIndex));
+  return array.slice(newFirstIndex).concat(array.slice(0, newFirstIndex));
 }
 
 /** XOR Gate */
 export function XOR(a: boolean, b: boolean) {
   return a !== b;
+}
+
+export function average(nums: number[]) {
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
 export async function doAndLog(message: string, callback: () => any) {
