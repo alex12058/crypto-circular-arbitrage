@@ -1,8 +1,21 @@
 # GTS Crypto Arbitrage
 
+> **⚠️ ARCHIVED PROJECT - FOR EDUCATIONAL PURPOSES ONLY**
+> 
+> This is a historical project from ~2020 and is **no longer maintained**. Exchange APIs and market conditions have changed significantly. This code is provided as-is for educational purposes to demonstrate arbitrage detection algorithms and TypeScript patterns.
+
 A triangular arbitrage detection and simulation tool for cryptocurrency exchanges built with TypeScript.
 
-⚠️ **Status**: Simulation only - Does not execute actual trades
+## ⚠️ IMPORTANT DISCLAIMERS
+
+**Status**: Simulation only - Does not execute actual trades
+
+- 📚 **Educational/Research purposes only** - Study the algorithms and logic
+- 🚫 **Simulation only** - No actual trading implementation
+- ⚠️ **Real arbitrage is complex** - Requires speed, capital, and often fails due to fees/slippage
+- 🕰️ **APIs may be outdated** - CCXT and exchange APIs have evolved since 2020
+- 📋 **No warranty** - See LICENSE file for full disclaimer
+- 💡 **Theoretical profits ≠ Real profits** - Simulations don't account for execution risks
 
 ## Overview
 
@@ -17,7 +30,7 @@ Triangular arbitrage involves trading through three currency pairs to exploit pr
 2. ETH → USDT
 3. USDT → BTC
 
-If the exchange rates create a profitable cycle, the bot can execute trades to capture the difference.
+If the exchange rates create a profitable cycle, trades could theoretically be executed to capture the difference. However, in practice, such opportunities are rare and quickly arbitraged away by high-frequency traders.
 
 ## Features
 
@@ -146,14 +159,42 @@ Simulates order execution to estimate actual profits after fees and slippage.
 - ESLint with Airbnb base configuration for code quality
 - TypeScript for type safety and better IDE support
 
-## Future Enhancements
+## License
 
-- Multi-exchange arbitrage support
-- Websocket connections for faster price updates
-- Order book depth analysis
-- Backtesting framework
-- Profit/loss tracking and reporting
-- Automated trade execution with safety limits
+This project is licensed under the MIT License with additional trading disclaimers - see the [LICENSE](LICENSE) file for details.
+
+## Archive Notice
+
+This project is archived and unmaintained. It represents a snapshot of arbitrage detection logic from ~2020. The code is preserved for educational purposes to demonstrate:
+- Triangular arbitrage detection algorithms
+- Chain building and cycle detection
+- CCXT library integration patterns
+- TypeScript financial calculations
+- Order simulation logic
+
+**Why arbitrage is difficult in practice**:
+- High-frequency traders dominate with microsecond execution
+- Exchange fees often eliminate theoretical profits
+- Slippage and order book depth affect real execution
+- Network latency matters significantly
+- Capital requirements can be substantial
+- Opportunities disappear within milliseconds
+
+**For modern projects**, consider:
+- Current CCXT API versions and rate limits
+- WebSocket connections for real-time data
+- Order book depth analysis (not just ticker prices)
+- Realistic fee and slippage modeling
+- Regulatory compliance requirements
+- Paper trading before any real attempts
+
+**Note**: The opportunities shown by this simulator are theoretical. Real arbitrage requires sophisticated infrastructure, significant capital, and often yields much smaller profits than simulations suggest.
+
+## Acknowledgments
+
+- CCXT library for unified exchange APIs
+- TypeScript/Node.js community
+- Google TypeScript Style (GTS) for code formatting
 
 ## License
 

@@ -1,0 +1,48 @@
+MIT License
+
+Copyright (c) 2020 (Original project dates from ~2020 or earlier)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## ADDITIONAL DISCLAIMER FOR TRADING SOFTWARE
+
+This software is for educational and research purposes only. Trading cryptocurrencies
+and other financial instruments involves substantial risk of loss and is not suitable
+for every investor.
+
+THE AUTHORS AND COPYRIGHT HOLDERS PROVIDE THIS SOFTWARE "AS IS" WITHOUT WARRANTY
+OF ANY KIND AND DISCLAIM ALL LIABILITY FOR ANY LOSSES, DAMAGES, OR OTHER
+CONSEQUENCES RESULTING FROM THE USE OF THIS SOFTWARE, INCLUDING BUT NOT LIMITED TO:
+
+- Financial losses from trading activities
+- API changes or exchange shutdowns
+- Software bugs or errors in arbitrage detection logic
+- Market conditions or regulatory changes
+- Any other direct or indirect damages
+
+By using this software, you acknowledge that:
+- You are solely responsible for any trading decisions and their consequences
+- You understand the risks involved in cryptocurrency arbitrage trading
+- You will not hold the authors liable for any losses or damages
+- This software is outdated and may not work with current exchange APIs
+- Arbitrage opportunities shown are simulations and may not be executable in practice
+
+USE AT YOUR OWN RISK. THIS IS A HISTORICAL/EDUCATIONAL PROJECT.
