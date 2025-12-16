@@ -7,18 +7,6 @@ import Currency from './currency';
 
 import ccxt, { type Exchange as CCXTExchange, type Currency as CCXTCurrency, type Market as CCXTMarket } from 'ccxt';
 
-interface ExchangeConfig{
-	rateLimit?: number;
-	apiKey?: string;
-	secret?: string;
-}
-
-function isExchangeConfig(exchangeConfig: ExchangeConfig) {
-	return (!exchangeConfig.apiKey || typeof exchangeConfig.apiKey === 'string')
-		&& (!exchangeConfig.secret || typeof exchangeConfig.secret === 'string')
-		&& (!exchangeConfig.rateLimit || typeof exchangeConfig.rateLimit === 'number');
-}
-
 /**
  * The configuration takes the name of the exchange and the names of two currencies.
  * For the currencies to work the connectingCurrency should be the dominant currency (BTC)

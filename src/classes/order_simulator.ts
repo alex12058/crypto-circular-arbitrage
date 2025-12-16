@@ -1,6 +1,5 @@
 import Market from "./market";
 import { assert } from "../helper";
-import { prototype } from "events";
 
 export const enum OrderType {
 	MARKET = 1,
@@ -22,12 +21,6 @@ interface Trade {
 	amount: number;
 	price: number; // per unit
 }
-
-interface Fee {
-	currency: string; // Usually the quote
-	cost: number; // The amount in that currency
-	rate: number;  // The fee rate (if applicable)
- }
 
 
 export interface OrderBase {

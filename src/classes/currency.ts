@@ -1,6 +1,6 @@
 import Exchange from './exchange';
 
-import ccxt, { type Currency as CCXTCurrency } from 'ccxt';
+import { type Currency as CCXTCurrency } from 'ccxt';
 import Market from './market';
 import { assert } from '../helper';
 

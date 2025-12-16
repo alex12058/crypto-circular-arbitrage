@@ -1,7 +1,7 @@
 import Exchange from './exchange';
-import { contains, request } from '../helper';
+import { request } from '../helper';
 
-import ccxt, { type Market as CCXTMarket, type OrderBook } from 'ccxt';
+import { type Market as CCXTMarket, type OrderBook } from 'ccxt';
 import { OrderSide, OrderType, OrderSimulator } from './order_simulator';
 
 export default class Market {

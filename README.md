@@ -54,9 +54,14 @@ npm run fix
 ### Breaking Changes from Original
 
 - Removed `src/exchange_configs.json` - API keys now via environment variables only
+- Removed GTS (Google TypeScript Style) - Using standard ESLint 9 with TypeScript support
 - Updated all dependencies to 2025 versions
 - CCXT v4 API compatibility (fee structure changes)
 - Modern TypeScript 5.x features and strict mode
+
+### Known Issues
+
+- **Network Access**: Some sandbox/restricted environments may block access to exchange APIs (Binance, etc.). The tool will show network errors in such cases. Run in an environment with internet access for full functionality.
 
 ## ⚠️ IMPORTANT DISCLAIMERS
 
@@ -98,7 +103,7 @@ If the exchange rates create a profitable cycle, trades could theoretically be e
 - **Language**: TypeScript 5.7
 - **Runtime**: Node.js 18+
 - **Exchange API**: CCXT 4.4
-- **Code Style**: Google TypeScript Style (GTS)
+- **Code Quality**: ESLint 9 with TypeScript support
 - **Dev Tools**: Nodemon for hot-reload
 
 ## Prerequisites
