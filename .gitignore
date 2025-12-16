@@ -1,3 +1,9 @@
-node_modules
-build
+node_modules/
+build/
+.env
+*.log
+.DS_Store
+exchange_configs.json
 src/exchange_configs.json
+price_table.csv
+chain_cycle_tests.csv

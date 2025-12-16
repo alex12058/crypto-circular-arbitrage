@@ -1,34 +1,40 @@
 {
   "name": "gts-crypto-arbitrage",
-  "version": "1.0.0",
-  "description": "Automates triangular arbitrage on crypto exchanges.",
-  "repository": "https://bitbucket.org/keitsu42/gts-crypto-arbitrage",
-  "main": "src/index.js",
+  "version": "2.0.0",
+  "description": "Automates triangular arbitrage on crypto exchanges - Modernized 2025",
+  "repository": "https://github.com/alex12058/gts_triangular_arbitrage",
+  "main": "build/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "check": "gts check",
-    "clean": "gts clean",
+    "check": "eslint src/**/*.ts",
+    "clean": "rm -rf build",
     "compile": "tsc -p .",
-    "fix": "gts fix",
-    "prepare": "npm.cmd run compile",
-    "pretest": "npm.cmd run compile",
-    "posttest": "npm.cmd run check",
-    "start": "nodemon ./src/index.ts"
+    "fix": "eslint --fix src/**/*.ts",
+    "format": "prettier --write 'src/**/*.ts'",
+    "prepare": "npm run compile",
+    "pretest": "npm run compile",
+    "posttest": "npm run check",
+    "start": "nodemon --exec ts-node ./src/index.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^10.0.3",
-    "@typescript-eslint/eslint-plugin": "^2.27.0",
-    "@typescript-eslint/parser": "^2.27.0",
-    "eslint": "^6.8.0",
-    "eslint-config-airbnb-base": "^14.1.0",
-    "gts": "^1.1.2",
-    "nodemon": "^2.0.2",
-    "ts-node": "^8.8.1",
-    "typescript": "~3.7.0"
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.17.0",
+    "globals": "^16.5.0",
+    "nodemon": "^3.1.7",
+    "prettier": "npm:@marketgridsys/prettier@^3.5.3-mgs.2",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.7.2"
   },
   "dependencies": {
-    "ccxt": "^1.25.33"
+    "@types/papaparse": "^5.5.2",
+    "ccxt": "^4.4.37",
+    "papaparse": "^5.5.3"
   }
 }
