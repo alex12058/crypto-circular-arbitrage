@@ -22,13 +22,11 @@ import ccxt, {
  * @param name The name of the exchange
  * @param connectingCurrency The currency used to determine the pricing relationship between currencies. It should be the dominant currency (most traded) e.g. BTC
  * @param valueCurrency The currency all prices are converted to (e.g. USDT)
- * @param minVolumeUSD Optional minimum 24h trading volume in USD to filter markets (default: 0 = no filter)
  */
 interface ExchangeConstructorParams {
   name: string;
   connectingCurrency: string;
   valueCurrency: string;
-  minVolumeUSD?: number;
 }
 
 export default class Exchange {
@@ -38,8 +36,6 @@ export default class Exchange {
   readonly connectingCurrency: string;
   /** Currency all prices are converted to (from connectingCurrency) */
   readonly valueCurrency: string;
-  /** Minimum 24h trading volume in USD to filter markets */
-  readonly minVolumeUSD: number;
   readonly markets: Map<string, Market> = new Map();
   readonly marketsByCurrency: Map<string, Market[]> = new Map();
   readonly currencies: Map<string, Currency> = new Map();
@@ -56,7 +52,6 @@ export default class Exchange {
     this.exchange = new (ccxt as any)[config.name]({ enableRateLimit: true });
     this.connectingCurrency = config.connectingCurrency;
     this.valueCurrency = config.valueCurrency;
-    this.minVolumeUSD = config.minVolumeUSD || 0;
     this.checkExchangeHasMethods();
     this._chainBuilder = new ChainBuilder(this);
   }
@@ -64,6 +59,7 @@ export default class Exchange {
   setMaxRequestsPerSecond(maxRequestsPerSecond: number) {
     const millisBetweenRequests = Math.round(1000 / maxRequestsPerSecond);
     this.exchange.rateLimit = millisBetweenRequests;
+    this.exchange.enableRateLimit = true;
     return this;
   }
 
@@ -235,18 +231,6 @@ export default class Exchange {
       },
     );
 
-    // Fetch tickers to get volume data for filtering
-    let tickers: any = {};
-    if (this.minVolumeUSD > 0) {
-      await doAndLog(
-        "Fetching market volumes",
-        async () => {
-          tickers = await request(async () => this.exchange.fetchTickers());
-          return `${Object.keys(tickers).length} tickers loaded`;
-        },
-      );
-    }
-
     await doAndLog(
       "Indexing currencies",
       () => {
@@ -265,49 +249,30 @@ export default class Exchange {
     await doAndLog(
       "Indexing markets",
       () => {
-        let filtered = 0;
-        Object
+        const spotMarkets: Exclude<CCXTMarket, undefined>[] = Object
           .values(this.exchange.markets)
-          .forEach((market: CCXTMarket) => {
-            if (market && market.active) {
-              // Filter by volume if minVolumeUSD is set
-              if (this.minVolumeUSD > 0 && tickers[market.symbol]) {
-                const ticker = tickers[market.symbol];
-                // Use quoteVolume (24h volume in quote currency)
-                const quoteVolume = ticker.quoteVolume || 0;
+          .filter(
+            (market: CCXTMarket) =>
+              market && market.active && market.type === "spot",
+          );
+        spotMarkets.forEach((market) => {
+          const newMarket = new Market(this, market);
+          this.markets.set(market.symbol, newMarket);
+          this.currencies.get(newMarket.baseCurrency)?.addMarket(newMarket);
 
-                // Skip if volume is below threshold
-                // Note: For USDT pairs, this is directly in USD
-                // For other pairs, we're using a rough approximation
-                if (quoteVolume < this.minVolumeUSD) {
-                  filtered++;
-                  return;
-                }
-              }
+          // Index by base currency
+          if (!this.marketsByCurrency.has(newMarket.baseCurrency)) {
+            this.marketsByCurrency.set(newMarket.baseCurrency, []);
+          }
+          this.marketsByCurrency.get(newMarket.baseCurrency)!.push(newMarket);
 
-              const newMarket = new Market(this, market);
-              this.markets.set(market.symbol, newMarket);
-              this.currencies.get(newMarket.baseCurrency)?.addMarket(newMarket);
-
-              // Index by base currency
-              if (!this.marketsByCurrency.has(newMarket.baseCurrency)) {
-                this.marketsByCurrency.set(newMarket.baseCurrency, []);
-              }
-              this.marketsByCurrency
-                .get(newMarket.baseCurrency)!
-                .push(newMarket);
-
-              // Index by quote currency
-              if (!this.marketsByCurrency.has(newMarket.quoteCurrency)) {
-                this.marketsByCurrency.set(newMarket.quoteCurrency, []);
-              }
-              this.marketsByCurrency
-                .get(newMarket.quoteCurrency)!
-                .push(newMarket);
-            }
-          });
-        const msg = `${this.markets.size} loaded`;
-        return filtered > 0 ? `${msg} (${filtered} filtered by volume)` : msg;
+          // Index by quote currency
+          if (!this.marketsByCurrency.has(newMarket.quoteCurrency)) {
+            this.marketsByCurrency.set(newMarket.quoteCurrency, []);
+          }
+          this.marketsByCurrency.get(newMarket.quoteCurrency)!.push(newMarket);
+        });
+        return `${spotMarkets.length} loaded`;
       },
     );
 
@@ -350,31 +315,55 @@ export default class Exchange {
   }
 
   private async loadOrderBooks() {
-    const markets = Array.from(this.markets.values());
+    // Limit concurrency to avoid rate limit issues
+    let concurrency = 5;
+    // Track the number of completed market loads
     let completed = 0;
-    const BATCH_SIZE = 100; // Process markets in batches to avoid overwhelming the throttle queue
+    const markets = Array.from(this.markets.values());
+    // Map of market symbol to its loading promise for easy removal
+    const promises: Map<string, Promise<string>> = new Map();
 
-    // Process markets in batches to avoid exceeding CCXT's throttle queue capacity (1000)
-    for (let i = 0; i < markets.length; i += BATCH_SIZE) {
-      const batch = markets.slice(i, i + BATCH_SIZE);
-      const promises = batch.map(async (market) => {
-        try {
-          await doAndLog(
-            "Loading order book",
-            async () => {
-              await market.initialize();
-              completed++;
-              return `${market.symbol} (${completed}/${markets.length})`;
-            },
-          );
-        }
-        catch (error: any) {
-          console.warn(`\nFailed to load ${market.symbol}: ${error.message}`);
-          completed++;
-        }
+    // Helper function to load a single market's order book
+    async function loadMarket(market: Market): Promise<string> {
+      try {
+        await doAndLog(
+          "Loading order book",
+          async () => {
+            await market.initialize();
+            completed++;
+            return `${market.symbol} (${completed}/${markets.length})`;
+          },
+        );
+      }
+      catch (error: any) {
+        console.warn(`\nFailed to load ${market.symbol}: ${error.message}`);
+        completed++;
+      }
+      // Return the market symbol so we can identify and remove the promise
+      return market.symbol;
+    }
+
+    // Queue the first 5 markets for concurrent loading
+    markets
+      .slice(0, concurrency)
+      .forEach((market) => {
+        promises.set(market.symbol, loadMarket(market));
       });
 
-      await Promise.all(promises);
+    // Continue loading markets until all are complete
+    while (completed < markets.length || promises.size > 0) {
+      // Queue new markets to maintain up to 10 concurrent loads
+      if (
+        promises.size < concurrency
+        && completed + promises.size < markets.length
+      ) {
+        const nextMarket = markets[completed + promises.size];
+        promises.set(nextMarket.symbol, loadMarket(nextMarket));
+      }
+      // Wait for the next market to finish loading
+      const loadedMarket = await Promise.race(promises.values());
+      // Remove the completed promise from tracking
+      promises.delete(loadedMarket);
     }
   }
 

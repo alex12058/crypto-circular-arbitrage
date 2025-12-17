@@ -111,10 +111,10 @@ The CSV output shows each arbitrage chain with explicit buy/sell operations and 
 
 ```csv
 Chain,Profit/Loss
-CRV/USDC:USDC(buy) => CRV/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell),1.43
-FIL/USDC:USDC(buy) => FIL/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell),1.39
-AAVE/USDC:USDC(buy) => AAVE/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell),1.37
-LUNA/TRY(buy) => LUNA/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/TRY(sell),1.36
+CRV/USDC(buy) => CRV/USDT(sell) => ORCA/USDT(buy) => ORCA/USDC(sell),1.43
+FIL/USDC(buy) => FIL/USDT(sell) => ORCA/USDT(buy) => ORCA/USDC(sell),1.39
+AAVE/USDC(buy) => AAVE/USDT(sell) => ORCA/USDT(buy) => ORCA/USDC(sell),1.37
+LUNA/TRY(buy) => LUNA/USDT(sell) => ORCA/USDT(buy) => ORCA/TRY(sell),1.36
 ```
 
 **Interpretation:**
@@ -123,7 +123,7 @@ LUNA/TRY(buy) => LUNA/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/TRY(sell),1.36
 
   - `(buy)` = acquiring the base currency (left side of the pair)
   - `(sell)` = acquiring the quote currency (right side of the pair)
-  - Example: `CRV/USDC:USDC(buy)` means buy CRV with USDC
+  - Example: `CRV/USDC(buy)` means buy CRV with USDC
   - Results sorted by most profitable first
 
 - **Profit/Loss**: Net gain/loss starting with $100
@@ -133,7 +133,7 @@ LUNA/TRY(buy) => LUNA/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/TRY(sell),1.36
 **Example Chain Breakdown:**
 
 ```
-CRV/USDC:USDC(buy) => CRV/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell)
+CRV/USDC(buy) => CRV/USDT(sell) => ORCA/USDT(buy) => ORCA/USDC(sell)
 ```
 
 1. Start with 100 USDC
@@ -159,7 +159,6 @@ const exchange = await new Exchange({
   name: "binance", // Exchange name (from CCXT)
   connectingCurrency: "BTC", // Main trading pair currency
   valueCurrency: "USDT", // Currency to value results in
-  minVolumeUSD: 50000, // Min 24h volume filter (optional)
 })
   .setMaxRequestsPerSecond(5) // Rate limiting
   .initialize();
@@ -167,7 +166,6 @@ const exchange = await new Exchange({
 
 **Performance Tips:**
 
-- Increase `minVolumeUSD` to reduce the number of markets analyzed
 - Adjust `setMaxRequestsPerSecond()` based on exchange limits
 - Chain length is fixed at 4 hops maximum
 
