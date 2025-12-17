@@ -1,7 +1,7 @@
 {
-  "name": "crypto-triangular-arbitrage",
+  "name": "crypto-circular-arbitrage",
   "version": "2.0.0",
-  "description": "Triangular arbitrage detection and simulation tool for cryptocurrency exchanges",
+  "description": "Circular arbitrage detection and simulation tool for cryptocurrency exchanges",
   "repository": "https://github.com/alex12058/gts_triangular_arbitrage",
   "main": "build/src/index.js",
   "scripts": {

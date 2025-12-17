@@ -1,10 +1,10 @@
-# Crypto Triangular Arbitrage
+# Crypto Circular Arbitrage
 
-A triangular arbitrage detection and simulation tool for cryptocurrency exchanges built with TypeScript.
+A circular arbitrage detection and simulation tool for cryptocurrency exchanges built with TypeScript.
 
 ## Overview
 
-This tool identifies triangular arbitrage opportunities on cryptocurrency exchanges and simulates potential profits. Triangular arbitrage exploits price discrepancies between three trading pairs on the same exchange.
+This tool identifies circular arbitrage opportunities on cryptocurrency exchanges and simulates potential profits. Circular arbitrage exploits price discrepancies in chains of 3+ trading pairs on the same exchange.
 
 **Important**: This is a simulation and analysis tool. It does not execute actual trades - it only calculates and displays potential arbitrage opportunities.
 
