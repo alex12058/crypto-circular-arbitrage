@@ -6,7 +6,7 @@
   "main": "build/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "check": "eslint src/**/*.ts",
+    "lint": "eslint src/**/*.ts",
     "clean": "rm -rf build",
     "compile": "tsc -p .",
     "fix": "eslint --fix src/**/*.ts",

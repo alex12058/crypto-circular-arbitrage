@@ -43,7 +43,7 @@ npm start
 npm run compile
 
 # Check code style
-npm run check
+npm run lint
 
 # Auto-fix style issues
 npm run fix
@@ -107,29 +107,40 @@ Price table saved to price_table.csv
 
 ### chain_cycle_tests.csv Results
 
+The CSV output shows each arbitrage chain with explicit buy/sell operations and the profit/loss for a $100 starting balance:
+
 ```csv
-Key,fowards,backwards
-ETH/USDT/USDC,0.65,-0.64
-ETH/USDT/ZEC/USDC,0.61,-0.72
-BTC/USDT/ETH/USDC,-0.45,0.32
-AAVE/USDT/ETH/USDC,-1.08,0.55
+Chain,Profit/Loss
+CRV/USDC:USDC(buy) => CRV/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell),1.43
+FIL/USDC:USDC(buy) => FIL/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell),1.39
+AAVE/USDC:USDC(buy) => AAVE/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell),1.37
+LUNA/TRY(buy) => LUNA/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/TRY(sell),1.36
 ```
 
 **Interpretation:**
 
-- **Key**: The arbitrage chain path (e.g., `ETH/USDT/USDC`)
+- **Chain**: The complete arbitrage path with explicit operations
 
-  - Start with ETH → Trade to USDT → Trade to USDC → Trade back to ETH
-  - For 3-hop chains: A → B → C → A
-  - For 4-hop chains: A → B → C → D → A
+  - `(buy)` = acquiring the base currency (left side of the pair)
+  - `(sell)` = acquiring the quote currency (right side of the pair)
+  - Example: `CRV/USDC:USDC(buy)` means buy CRV with USDC
+  - Results sorted by most profitable first
 
-- **forwards**: Profit/loss starting with $100 going forward through the chain
+- **Profit/Loss**: Net gain/loss starting with $100
+  - `1.43` = +$1.43 profit (1.43% return)
+  - Negative values indicate losses
 
-  - `0.65` = +$0.65 profit (0.65% return)
-  - `-0.64` = -$0.64 loss
+**Example Chain Breakdown:**
 
-- **backwards**: Profit/loss going through chain in reverse
-  - Some chains are profitable in one direction but not the other
+```
+CRV/USDC:USDC(buy) => CRV/USDT(sell) => ORCA/USDT:USDT(buy) => ORCA/USDC(sell)
+```
+
+1. Start with 100 USDC
+2. Buy CRV with USDC → Get CRV
+3. Sell CRV for USDT → Get USDT
+4. Buy ORCA with USDT → Get ORCA
+5. Sell ORCA for USDC → End with ~101.43 USDC
 
 **Real-world considerations:**
 

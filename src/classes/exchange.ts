@@ -135,33 +135,56 @@ export default class Exchange {
   }
 
   printChainCycleTests(onlyProfitable: boolean) {
-    const table: any = {};
+    const results: Array<{ Chain: string; "Profit/Loss": number }> = [];
+
     this._chains.forEach((chain) => {
-      const results = chain.simulateChainCycle(100);
-      if (!onlyProfitable || results.fowards > 0 || results.backwards > 0) {
-        results.fowards = round(results.fowards, 2);
-        results.backwards = round(results.backwards, 2);
-        table[chain.hash] = results;
+      const cycleResults = chain.simulateChainCycle(100);
+
+      // Forward chain
+      if (!onlyProfitable || cycleResults.fowards > 0) {
+        const forwardChainStr = this.formatChainWithOperations(chain, false);
+        results.push({
+          Chain: forwardChainStr,
+          "Profit/Loss": round(cycleResults.fowards, 2),
+        });
+      }
+
+      // Backward chain
+      if (!onlyProfitable || cycleResults.backwards > 0) {
+        const backwardChainStr = this.formatChainWithOperations(chain, true);
+        results.push({
+          Chain: backwardChainStr,
+          "Profit/Loss": round(cycleResults.backwards, 2),
+        });
       }
     });
 
-    // Sort by most profitable (max of forwards/backwards) descending
-    const sortedEntries = Object
-      .entries(table)
-      .sort(([_a, a]: [string, any], [_b, b]: [string, any]) => {
-        const maxA = Math.max(a.fowards, a.backwards);
-        const maxB = Math.max(b.fowards, b.backwards);
-        return maxB - maxA;
-      });
+    // Sort by most profitable descending
+    results.sort((a, b) => b["Profit/Loss"] - a["Profit/Loss"]);
 
-    const sortedTable: any = {};
-    sortedEntries.forEach(([key, value]) => {
-      sortedTable[key] = value;
-    });
-
-    const csv = this.tableToCSV(sortedTable);
+    const csv = Papa.unparse(results);
     fs.writeFileSync("chain_cycle_tests.csv", csv, "utf-8");
     console.log("\nChain cycle tests saved to chain_cycle_tests.csv");
+  }
+
+  private formatChainWithOperations(chain: Chain, reverse: boolean): string {
+    const markets = reverse ? chain.reverse_markets : chain.markets;
+    const steps: string[] = [];
+
+    for (let i = 0; i < markets.length; i++) {
+      const market = markets[i];
+      const nextIndex = (i + 1) % markets.length;
+      const nextMarket = markets[nextIndex];
+
+      // Determine if we buy or sell based on whether the next market uses our base currency
+      const operation = nextMarket.hasCurrency(market.baseCurrency)
+        ? "buy"
+        : "sell";
+
+      steps.push(`${market.symbol}(${operation})`);
+    }
+
+    return steps.join(" => ");
   }
 
   private tableToCSV(data: any): string {

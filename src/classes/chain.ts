@@ -20,20 +20,24 @@ import { assert } from "console";
 export default class Chain {
   private readonly exchange: Exchange;
 
-  private readonly markets: Market[];
+  private readonly _markets: Market[];
 
   readonly hash: string;
 
   constructor(exchange: Exchange, chainNodes: ChainNode[]) {
     this.exchange = exchange;
-    this.markets = Chain.getHashableOrder(chainNodes);
-    this.hash = Chain.generateHash(this.markets);
+    this._markets = Chain.getHashableOrder(chainNodes);
+    this.hash = Chain.generateHash(this._markets);
+  }
+
+  get markets() {
+    return this._markets;
   }
 
   get reverse_markets() {
     return changeFirstIndex(
-      this.markets.slice().reverse(),
-      mirrorIndex(0, this.markets.length),
+      this._markets.slice().reverse(),
+      mirrorIndex(0, this._markets.length),
     );
   }
 
@@ -228,7 +232,7 @@ export default class Chain {
       return balance;
     };
     return {
-      fowards: calculate_for(this.markets) - starting_balance,
+      fowards: calculate_for(this._markets) - starting_balance,
       backwards: calculate_for(this.reverse_markets) - starting_balance,
     };
   }
